@@ -1,0 +1,10 @@
+# IP: Comment
+# This is comment and only one line comment is supported.
+# Example:
+# 127.0.0.1/24: It is NTP
+159.203.158.197: NTP
+65.182.224.60: NTP
+178.128.4.44: NTP
+45.76.244.202: NTP
+192.73.243.97: NTP
+162.213.2.253: NTP

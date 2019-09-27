@@ -1,0 +1,71 @@
+swagger: "2.0"
+info:
+  description: Return occurance that has been identified so far.
+  version: "1.0.0"
+  title: Snooper Incidents
+consumes:
+  - "application/json"
+produces:
+  - "application/json"
+
+basePath: "/api/v1"
+
+# Paths supported by the server application
+paths:
+  /snooped:
+    get:
+      operationId: "Snooped.read"
+      tags:
+        - "Guilty"
+      summary: "Caught by Snooper"
+      description: "Get list of Snooped data"
+      responses:
+        200:
+          description: "Successful read snooped list operation"
+          schema:
+            type: "array"
+            items:
+              properties:
+                record:
+                  type: object
+                  additionalProperties: true
+  /records:
+    get:
+      operationId: "Snooped.read_by_time"
+      tags:
+        - "Guilty"
+      summary: "Caught by Snooper since last specified time"
+      description: "Get list of Snooped data"
+      parameters:
+        - name: found_in
+          in: "query"
+          description: "Can have <number>D|H|M|S format"
+          type: "string"
+          required: true
+      responses:
+        200:
+          description: "Successful read snooped list operation"
+          schema:
+            type: "array"
+            items:
+              properties:
+                record:
+                  type: object
+                  additionalProperties: true
+
+  /id:
+    get:
+      operationId: "Snooped.get_uuid"
+      tags:
+        - "Manage"
+      summary: "UUID of node on which snooper is running"
+      description: "It is UUID of a node on which Snooper is running"
+      responses:
+        200:
+          description: "Snooper is running and able to capture UUID"
+          schema:
+            type: object
+            properties:
+              uuid:
+                type: string
+
