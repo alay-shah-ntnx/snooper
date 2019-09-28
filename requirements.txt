@@ -38,5 +38,5 @@ subprocess32==3.5.3
 supervisor==3.3.4
 swagger-ui-bundle==0.0.2
 typing==3.6.6
-urllib3==1.23
+urllib3==1.24.2
 Werkzeug==0.14.1
