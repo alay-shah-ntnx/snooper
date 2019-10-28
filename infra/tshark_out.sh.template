@@ -1,6 +1,5 @@
 #!/bin/bash
 # List filter LINE BY LINE. No exception
-#   source be supermicro MAC address
 #   destination IP is NOT 10.xx.xx.xx (internal network)
 #   not arp
 #   Not targetting DHCPv6 multicast request
@@ -13,9 +12,9 @@
 #   Ignore LLDP
 #   Ignore LLDP
 #   Ignore LLDP
+%%COMMENT_LIST%%
 #   Ignore CDP
 #   Ignore Cisco Shared Spanning Tree Protocol
-#               -Y "(eth.src[0:3] == 0c:c4:7a || eth.dst[0:3] == 0c:c4:7a) && 
 if [ $# -eq 0 ]; then file="file"; else file="$1"; fi
 tshark -nr $file\
                -Y "!(ip.dst == 10.0.0.0/8) &&

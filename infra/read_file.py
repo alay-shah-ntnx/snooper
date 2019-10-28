@@ -1,4 +1,5 @@
 #!/bin/python
+import sys
 from StringIO import StringIO
 import re
 import argparse
@@ -10,11 +11,15 @@ def main(args):
     conditions = [
     ]
     comments = StringIO()
-    config = ConfigParser.ConfigParser()
+    config = ConfigParser.SafeConfigParser()
     config.read(args.template_input)
     for section in config.sections():
-        print ("Adding Ignore => %s" % config.get(section, "comment"))
-        comments.write("# %s\n" % config.get(section, "comment"))
+        try:
+            print ("Adding Ignore => %s" % config.get(section, "comment"))
+            comments.write("#   %s\n" % config.get(section, "comment"))
+        except ConfigParser.NoOptionError:
+            print ("Adding Ignore => %s" % section)
+            comments.write("#   %s\n" % section)
         conditions.append(config.get(section, "expr"))
 
     with open(args.template) as fp:
@@ -33,12 +38,16 @@ def main(args):
     file_str = file_str.replace("%%EXCEPTION_LIST%%\n",
                                 var.getvalue().lstrip())
 
+    comments.seek(0)
+    file_str = file_str.replace("%%COMMENT_LIST%%\n",
+                                comments.getvalue().lstrip())
+
     with open(args.output, "w") as out_f:
         out_f.write(file_str)
         out_f.write(comments.getvalue())
 
 
-def get_arguments():
+def get_arguments(list_of_string):
     parser = argparse.ArgumentParser(description='Tempate Change Watcher.')
     parser.add_argument('--template-input', required=True,
                         help="Input file to template")
@@ -51,5 +60,5 @@ def get_arguments():
 
 
 if __name__ == "__main__":
-    args = get_arguments()
+    args = get_arguments(sys.argv)
     main(args)
