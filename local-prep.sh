@@ -33,3 +33,5 @@ function download {
 for file in "${FILES[@]}"; do
     download "$file"
 done
+
+tar zcvf snooper.tar.gz requirements.txt  infra
