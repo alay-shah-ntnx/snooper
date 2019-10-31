@@ -281,7 +281,11 @@ def convert_pcap_to_csv(args, pcap, out="now.csv", header=False, f_ptr=None):
     if f_ptr is None:
         pass
     else:
+<<<<<<< HEAD
         f_ptr.new_inode(args.capture_exception)
+=======
+        f_ptr.new_inode(os.stat(args.capture_exception)[stat.ST_INO])
+>>>>>>> 4cc910445a73100ebcc307ebbd90afb1604ca0a9
         if f_ptr.is_changed(update_time=True):
             template_args = []
             template_args.append("--template-input")
@@ -561,7 +565,11 @@ if __name__ == "__main__":
                                                           pcap=process_file,
                                                           out=_csv_file,
                                                           header=not file_Created,
+<<<<<<< HEAD
                                                           f_ptr=f_ptr
+=======
+                                                          f_ptr
+>>>>>>> 4cc910445a73100ebcc307ebbd90afb1604ca0a9
                                                           )
                 if new_entry:
                     file_Created = True
