@@ -13,7 +13,12 @@ def main(args):
     comments = StringIO()
     config = ConfigParser.SafeConfigParser()
     config.read(args.template_input)
+    v_tuple = None
     for section in config.sections():
+        if section.lower() == "version":
+            v_tuple = (config.get(section, "number"),
+                       config.get(section, "log"))
+            continue
         try:
             print ("Adding Ignore => %s" % config.get(section, "comment"))
             comments.write("#   %s\n" % config.get(section, "comment"))
@@ -22,6 +27,8 @@ def main(args):
             comments.write("#   %s\n" % section)
         conditions.append(config.get(section, "expr"))
 
+    if v_tuple is None:
+        raise RuntimeError ("Version section is required with number and log field")
     with open(args.template) as fp:
         file_str = fp.read()
 
@@ -42,9 +49,11 @@ def main(args):
     file_str = file_str.replace("%%COMMENT_LIST%%\n",
                                 comments.getvalue().lstrip())
 
+    file_str = file_str.replace("%%VERSION%%",
+                                ("# Version: %s\n"
+                                 "# Log: %s" % (v_tuple)))
     with open(args.output, "w") as out_f:
         out_f.write(file_str)
-        out_f.write(comments.getvalue())
 
 
 def get_arguments(list_of_string):

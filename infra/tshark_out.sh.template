@@ -51,3 +51,4 @@ tshark -nr $file\
 
     #-o 'gui.column.format:"No.","%m","Destination","%d"' \
 # tshark -o 'gui.column.format:"No.","%m","Time","%t","Source","%s","Destination","%d","Protocol","%p","Length","%L","Info","%i"'
+%%VERSION%%

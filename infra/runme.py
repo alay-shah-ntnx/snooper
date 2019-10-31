@@ -1,12 +1,15 @@
 #from geoip import geolite2
 from __future__ import print_function
 
-import requests, json
+import requests
+import json
 import sys
 import os
+import stat
 import pandas as pd
 import matplotlib
 import argparse
+import subprocess
 import read_exception
 matplotlib.use('Agg')
 
@@ -14,23 +17,23 @@ from mpl_toolkits.basemap import Basemap
 import matplotlib.pyplot as plt
 import numpy as np
 from StringIO import StringIO
-import subprocess, shlex
+import shlex
 from time import gmtime, strftime
 import time
 from collections import deque
 import signal
-import sys
 import re
-import connexion
 import fcntl
 from datetime import datetime
+import read_file
 
 import warnings
 import matplotlib.cbook
-warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)
+warnings.filterwarnings("ignore",
+                        category=matplotlib.cbook.mplDeprecation)
 # Alay's key!
-KEY='85cd2b619c064950812c3ba75b5ea4f4'
-work_dir='work'
+KEY = '85cd2b619c064950812c3ba75b5ea4f4'
+work_dir = 'work'
 saved_query = 0
 charged_query = 0
 
@@ -82,6 +85,38 @@ class GracefulInterruptHandler(object):
     def serviced(self):
         self.interrupted = False
 
+
+class _FilePtr(object):
+    def __init__(self):
+        self.pre_time = None
+        self.cur_time = None
+
+    def new_inode(self, file_pointer):
+        valid_file = (os.path.exists(file_pointer) and
+                      os.path.isfile(file_pointer))
+        if file_pointer is not None and valid_file:
+            self.cur_time = os.stat(file_pointer)[stat.ST_INO]
+
+    def is_changed(self, update_time=False):
+        ret_status = False
+        if self.cur_time is None:
+            return False
+        if self.pre_time is None:
+            ret_status = True
+        else:
+            if self.cur_time != self.pre_time:
+                ret_status = True
+
+        if ret_status and update_time:
+            self.pre_time = self.cur_time
+
+        return ret_status
+
+    def get_cur_time(self):
+        return self.cur_time
+
+
+
 def run_subscribe(cmd):
     p = subprocess.Popen(shlex.split(cmd),
                          stdout=subprocess.PIPE,
@@ -93,7 +128,6 @@ def run_subscribe(cmd):
     return_code = p.wait()
     if return_code != 0:
         raise subprocess.CalledProcessError(return_code, cmd)
-
 
 
 def eprint(*args, **kwargs):
@@ -113,22 +147,20 @@ def run(cmd, err_is_fatal=True):
     while p.poll():
         time.sleep(0.5)
 
-    o,e = p.communicate()
+    o, e = p.communicate()
 
     if err_is_fatal:
         if p.returncode == 0:
             return o
         else:
-            raise Exception ("%s ended with error.\nSTDERR:%s\nSTDOUT:%s"
-                             "\nEXIT:%d" % (cmd, e, o, p.returncode))
+            raise Exception("%s ended with error.\nSTDERR:%s\nSTDOUT:%s"
+                            "\nEXIT:%d" % (cmd, e, o, p.returncode))
     else:
-        return (o,e,p.returncode)
-
-
+        return (o, e, p.returncode)
 
 
 def get_continent_name(name):
-    mapping=dict()
+    mapping = dict()
     mapping['NA'] = 'North America'
     mapping['SA'] = 'South America'
     mapping['AF'] = 'Africa'
@@ -136,14 +168,15 @@ def get_continent_name(name):
     mapping['EU'] = 'Europe'
     mapping['OC'] = 'Oceania'
 
-    return mapping.get(name,"Unknown")
+    return mapping.get(name, "Unknown")
+
 
 def _get_data(ip):
     global charged_query
     global saved_query
     ts = strftime("%d_%b_%Y", gmtime())
-    directory = os.path.join(work_dir,"ipinfo", ts)
-    file_name = os.path.join(directory,'%s.json' % ip)
+    directory = os.path.join(work_dir, "ipinfo", ts)
+    file_name = os.path.join(directory, '%s.json' % ip)
     if os.path.exists(file_name):
         with open(file_name) as f:
             saved_query += 1
@@ -152,7 +185,7 @@ def _get_data(ip):
     if not os.path.exists(directory):
         os.makedirs(directory)
 
-    URL='https://api.ipgeolocation.io/ipgeo?apiKey=%s' % (KEY)
+    URL = 'https://api.ipgeolocation.io/ipgeo?apiKey=%s' % (KEY)
     req = URL + "&ip=%s" % ip
     charged_query += 1
     response = requests.get(req)
@@ -171,6 +204,7 @@ def _get_data(ip):
 
     return jData
 
+
 def write_loc_info(fp, ip, count, args):
     if args.geo_tagging:
         jData = _get_data(ip)
@@ -179,15 +213,16 @@ def write_loc_info(fp, ip, count, args):
     fp.write("\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"\n" % (ip,
                                        jData.get('country_name', "Unknown"),
                                        get_continent_name(jData.get('continent_code')),
-                                       jData.get('longitude',0),
-                                       jData.get('latitude',0),
+                                       jData.get('longitude', 0),
+                                       jData.get('latitude', 0),
                                        count,
                                        jData.get('organization', 'Unknown')
                  ))
 
+
 def group_data(pd_df, args):
-    if ((type(pd_df) is not pd.DataFrame) and 
-        os.path.isfile(pd_df)):
+    if ((type(pd_df) is not pd.DataFrame) and
+       os.path.isfile(pd_df)):
         pd_df = pd.read_csv(pd_df)
 
     myFile = StringIO()
@@ -202,6 +237,7 @@ def group_data(pd_df, args):
     myFile.seek(0)
     return myFile
 
+
 def is_site_reachable(site):
     try:
         r = requests.get(site)
@@ -209,13 +245,13 @@ def is_site_reachable(site):
     except requests.exceptions.RequestException as e:
         return False
 
+
 class IPException(object):
     def __init__(self, file_name):
         self.file_name = file_name
         self._last_ip = ''
         self._last_text = ''
         self._last_action = None
-
 
     def _get_response(self, ip):
         if self._last_ip != ip:
@@ -232,14 +268,28 @@ class IPException(object):
         return self._last_text
 
 
-def convert_pcap_to_csv(args, pcap, out="now.csv", header=False):
+def convert_pcap_to_csv(args, pcap, out="now.csv", header=False, f_ptr=None):
     generic_file_name = out
 
     exception = IPException('exception.txt')
-    created=False
+    created = False
     file_name = os.path.splitext(pcap)[0]
     raw_name = file_name + '_raw.csv'
     filtered_name = file_name + '_filtered.csv'
+    if f_ptr is None:
+        pass
+    else:
+        f_ptr.new_inode(os.stat(args.capture_exception)[stat.ST_INO])
+        if f_ptr.is_changed(update_time=True):
+            template_args = []
+            template_args.append("--template-input")
+            template_args.append(args.capture_exception)
+            template_args.append("--template")
+            template_args.append("tshark_out.sh.template")
+            template_args.append("--output")
+            template_args.append("./tshark_out.sh")
+            read_file.main(read_file.get_arguments(template_args))
+
     outf = StringIO(run("./tshark_out.sh %s" % pcap))
     outf.seek(0)
     in_data = pd.read_csv(outf)
@@ -304,17 +354,17 @@ def create_plot(csv_file, args):
     data = pd.read_csv(myFile, dtype={'ip':np.unicode_})
     my_dpi=300
     plt.figure(figsize=(2600/my_dpi, 1800/my_dpi), dpi=my_dpi)
-    
+
     m=Basemap(llcrnrlon=-180, llcrnrlat=-65,urcrnrlon=180,urcrnrlat=80)
     m.drawmapboundary(fill_color='#A6CAE0', linewidth=0)
     m.fillcontinents(color='grey', alpha=0.3)
     m.drawcoastlines(linewidth=0.1, color="white")
-    
-    
+
+
     count = in_data.count()['frame.number']
     if count > 1:
         start, end = in_data.iloc[[0,-1]]['frame.time'].tolist()
-    
+
     # prepare a color for each point depending on the continent.
     data['labels_enc'] = pd.factorize(data['country'])[0]
     m.scatter(data['lon'], data['lat'], s=data['n']/6, alpha=0.7, c=data['labels_enc'], cmap="Set1")
@@ -352,7 +402,7 @@ def get_epochtime(d):
     s = re.match('.*' + PAT, d)
     if s:
         us_value = int(s.group(1))
-    
+
     x = datetime.strptime(y, fmt)
     return (int(x.strftime('%s')), us_value)
 
@@ -382,10 +432,13 @@ def parse_arguments():
                         default=[],
                         help=('Interface indexes to capture data from.'
                               '  **NOTE: Must be physical port.'))
+    group.add_argument('-e', '--capture-exception',
+                       help=('Config file to pass on exception.'
+                             'File content can be modified runtime.'))
     parser.add_argument('-d', '--duration', type=int, default=10,
                         help=('Minimum granularity for continious capture '
                               '(min 5) in seconds. (Default = 10)'))
-                        
+
     parser.add_argument('-w', '--work-dir', default='work',
                         help='Work directory name.')
     parser.add_argument('-f', '--option-file', type=open, action=LoadFromFile,
@@ -411,7 +464,7 @@ def parse_arguments():
 
 if __name__ == "__main__":
     config = dict()
-    available_files=deque()
+    available_files = deque()
     pcap_file = 'file_del.pcap'
     csv_file = "now_v2.csv"
     check_site_url = 'https://api.ipgeolocation.io'
@@ -434,8 +487,6 @@ if __name__ == "__main__":
                    "%s" % '\n'.join(['%s  -->  %s' % (t[0], t[1]) for t in link_tup]))
             sys.exit(-1)
 
-    
-
     if site_reachable is False:
         if args.with_graph:
             eprint("Can't reach to %s. Aborting." % check_site_url)
@@ -445,13 +496,13 @@ if __name__ == "__main__":
         if site_reachable:
             args.geo_tagging = True
         else:
-            eprint("Can't do geo tagging since %s unreachable" % check_site_url)
+            eprint("Can't do geo tagging since "
+                   "%s unreachable" % check_site_url)
             args.geo_tagging = False
 
     work_dir = args.work_dir
     interface = ['-i'] * (2*len(args.capture_interfaces))
     interface[1::2] = args.capture_interfaces
-
 
     directory = os.path.join(work_dir, 'pcaps')
     pcap_full_file = os.path.join(directory, pcap_file)
@@ -460,7 +511,7 @@ if __name__ == "__main__":
 
     make_dirs([work_dir, directory])
     cmd = ("dumpcap  --time-stamp-type host "
-           "%s  -b duration:%d -q -w %s" % (' '.join(interface), 
+           "%s  -b duration:%d -q -w %s" % (' '.join(interface),
                                             args.duration,
                                             pcap_full_file))
     dmi_1 = run('dmidecode -t 1')
@@ -478,6 +529,7 @@ if __name__ == "__main__":
         json.dump(config, w)
 
     with GracefulInterruptHandler() as h:
+        f_ptr = _FilePtr()
         for index, out in enumerate(run_subscribe(cmd)):
             if h.interrupted:
                 h.serviced()
@@ -487,7 +539,7 @@ if __name__ == "__main__":
                     print("Savings: %.2f%%" % (100.0*saved_query/(1.0*(saved_query+charged_query))))
                 except ZeroDivisionError:
                     print("Savings: NA")
- 
+
             if h.stop_req:
                 break
             # File: file_del_00001_20181013153113.pcap
@@ -500,13 +552,14 @@ if __name__ == "__main__":
                 print("File being generated... %s" % file_gen)
                 available_files.append(file_gen)
             if ((len(available_files) > 1) or
-                (last_line and len(available_files) > 0)):
+               (last_line and len(available_files) > 0)):
                 process_file = available_files.popleft()
                 print("Process %s" % process_file)
                 csv_name, new_entry = convert_pcap_to_csv(args,
                                                           pcap=process_file,
                                                           out=_csv_file,
-                                                          header=not file_Created
+                                                          header=not file_Created,
+                                                          f_ptr
                                                           )
                 if new_entry:
                     file_Created = True
@@ -515,5 +568,5 @@ if __name__ == "__main__":
                         create_plot(csv_name, args)
                 else:
                     os.remove(process_file)
-                
+
     sys.exit(0)
