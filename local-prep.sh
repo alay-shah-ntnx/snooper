@@ -31,6 +31,7 @@ popd #BUILD_DIR
 cp -rf etc configs infra  packages ${payload_dir}
 cp -f setmeup.sh ${root_dir}
 pushd ${payload_dir}
+mkdir logs
 
 function _check_integrity {
     local file_name="$1"
