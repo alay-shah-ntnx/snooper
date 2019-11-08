@@ -570,5 +570,6 @@ if __name__ == "__main__":
                         create_plot(csv_name, args)
                 else:
                     os.remove(process_file)
+            sys.stdout.flush()
 
     sys.exit(0)
