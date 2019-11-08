@@ -434,7 +434,7 @@ def parse_arguments():
                         default=[],
                         help=('Interface indexes to capture data from.'
                               '  **NOTE: Must be physical port.'))
-    group.add_argument('-e', '--capture-exception',
+    parser.add_argument('-e', '--capture-exception',
                        help=('Config file to pass on exception.'
                              'File content can be modified runtime.'))
     parser.add_argument('-d', '--duration', type=int, default=10,
@@ -570,5 +570,6 @@ if __name__ == "__main__":
                         create_plot(csv_name, args)
                 else:
                     os.remove(process_file)
+            sys.stdout.flush()
 
     sys.exit(0)

@@ -28,7 +28,8 @@ def main(args):
         conditions.append(config.get(section, "expr"))
 
     if v_tuple is None:
-        raise RuntimeError ("Version section is required with number and log field")
+        raise RuntimeError("Version section is required with number and "
+                           "log field")
     with open(args.template) as fp:
         file_str = fp.read()
 
@@ -64,7 +65,7 @@ def get_arguments(list_of_string):
                         help="Template for change.")
     parser.add_argument('--output', required=True,
                         help="Output file name.")
-    args = parser.parse_args()
+    args = parser.parse_args(list_of_string)
     return args
 
 
